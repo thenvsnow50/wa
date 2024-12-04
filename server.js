@@ -79,19 +79,18 @@ app.post('/webhook', async (req, res) => {
     try {
         if (req.body?.customer?.phone) {
             const customerPhone = req.body.customer.phone;
-            const orderNumber = req.body.name;
+            const orderNumber = `#${req.body.order_number}`;
             const currency = req.body.currency;
             const customerName = req.body.customer.first_name;
             
-            // Create order details section
             let orderDetails = '';
             req.body.line_items.forEach(item => {
-                orderDetails += `\n- ${item.name} (${item.variant_title})`;
+                orderDetails += `\n- ${item.title} (${item.variant_title})`;
                 orderDetails += `\n  Quantity: ${item.quantity}`;
-                orderDetails += `\n  Price: ${currency} ${item.price}\n`;
+                orderDetails += `\n  Price: ${currency} ${parseFloat(item.price).toFixed(2)}\n`;
             });
             
-            const message = `Hi ${customerName}! Thank you for your order ${orderNumber}.\n\nOrder Details:${orderDetails}\nTotal Amount: ${currency} ${req.body.total_price}\n\nWe will process your order soon.`;
+            const message = `Hi ${customerName}! Thank you for your order ${orderNumber}.\n\nOrder Details:${orderDetails}\nTotal Amount: ${currency} ${parseFloat(req.body.total_price).toFixed(2)}\n\nWe will process your order soon.`;
 
             if (isClientReady) {
                 const formattedPhone = customerPhone.replace(/[^0-9]/g, '') + '@c.us';

@@ -27,7 +27,7 @@ if (fs.existsSync(sessionFilePath)) {
       if (err) {
         console.error('Error generating QR code:', err);
       } else {
-        // Display the QR code in the browser
+        // Serve the QR code when requested
         app.get('/qr', (req, res) => {
           res.send(`<img src="${url}" alt="Scan this QR code to log in to WhatsApp">`);
         });
@@ -53,23 +53,21 @@ const sendMessage = (phone, message) => {
 
 // Webhook endpoint to handle Shopify events
 app.post('/webhook', (req, res) => {
-  // Log the incoming webhook data (for debugging purposes)
   console.log('Received webhook:', req.body);
 
-  // Example: Check for a new order event (adjust depending on the webhook event you want to handle)
   if (req.body && req.body.customer && req.body.customer.phone) {
     const customerPhone = req.body.customer.phone;
     const orderId = req.body.id;
-    
-    // Prepare your message (customize this message)
     const message = `Thank you for your order #${orderId}! We will process it soon.`;
-
-    // Send the message to the customer via WhatsApp
     sendMessage(customerPhone, message);
   }
 
-  // Respond to Shopify to acknowledge receipt of the webhook
   res.status(200).send('Webhook received');
+});
+
+// Serve a default response for /qr in case it's not generated yet
+app.get('/qr', (req, res) => {
+  res.send('<p>QR code is being generated. Please wait...</p>');
 });
 
 // Start the server

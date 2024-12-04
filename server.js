@@ -8,6 +8,7 @@ app.use(bodyParser.json());
 
 let qrCodeURL = null;
 let isClientReady = false;
+let messageQueue = [];
 
 const client = new Client({
     authStrategy: new LocalAuth(),
@@ -22,18 +23,24 @@ const client = new Client({
             '--single-process',
             '--disable-gpu'
         ],
-        executablePath: '/usr/bin/google-chrome-stable',
         headless: true
     }
 });
 
-app.get('/qr', (req, res) => {
-    if (qrCodeURL) {
-        res.send(`<img src="${qrCodeURL}" alt="Scan this QR code to log in to WhatsApp">`);
-    } else {
-        res.send('QR code not generated yet. Please wait or restart the service.');
+const processMessageQueue = async () => {
+    while (messageQueue.length > 0) {
+        const { phone, message } = messageQueue[0];
+        try {
+            const formattedPhone = phone.replace(/[^0-9]/g, '') + '@c.us';
+            await client.sendMessage(formattedPhone, message);
+            console.log(`Message sent successfully to ${phone}`);
+            messageQueue.shift();
+        } catch (err) {
+            console.log(`Failed to send message to ${phone}:`, err.message);
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before retry
+        }
     }
-});
+};
 
 client.on('qr', (qr) => {
     qrcode.toDataURL(qr, (err, url) => {
@@ -49,6 +56,7 @@ client.on('qr', (qr) => {
 client.on('ready', () => {
     isClientReady = true;
     console.log('WhatsApp Web client is ready!');
+    processMessageQueue();
 });
 
 client.on('disconnected', () => {
@@ -57,28 +65,13 @@ client.on('disconnected', () => {
     client.initialize();
 });
 
-const sendMessage = async (phone, message) => {
-    if (!isClientReady) {
-        console.log('Waiting for client to be ready...');
-        await new Promise(resolve => setTimeout(resolve, 5000));
+app.get('/qr', (req, res) => {
+    if (qrCodeURL) {
+        res.send(`<img src="${qrCodeURL}" alt="Scan this QR code to log in to WhatsApp">`);
+    } else {
+        res.send('QR code not generated yet. Please wait.');
     }
-    
-    try {
-        const formattedPhone = phone.replace(/[^0-9]/g, '') + '@c.us';
-        const isRegistered = await client.isRegisteredUser(formattedPhone);
-        
-        if (!isRegistered) {
-            throw new Error('Phone number not registered on WhatsApp');
-        }
-
-        const response = await client.sendMessage(formattedPhone, message);
-        console.log(`Message sent successfully to ${phone}`);
-        return response;
-    } catch (err) {
-        console.log(`Failed to send message to ${phone}:`, err.message);
-        throw err;
-    }
-};
+});
 
 app.post('/webhook', async (req, res) => {
     console.log('Received webhook:', req.body);
@@ -89,11 +82,20 @@ app.post('/webhook', async (req, res) => {
             const orderNumber = req.body.order_number;
             const totalAmount = req.body.total_price;
             const currency = req.body.currency;
+            const customerName = req.body.customer.first_name;
             
-            const message = `Thank you for your order #${orderNumber}! Your order total is ${currency} ${totalAmount}. We will process it soon.`;
+            const message = `Hi ${customerName}! Thank you for your order #${orderNumber}. Your order total is ${currency} ${totalAmount}. We will process it soon.`;
 
-            await sendMessage(customerPhone, message);
-            res.status(200).send('Message sent successfully');
+            if (isClientReady) {
+                const formattedPhone = customerPhone.replace(/[^0-9]/g, '') + '@c.us';
+                await client.sendMessage(formattedPhone, message);
+                console.log(`Message sent directly to ${customerPhone}`);
+            } else {
+                messageQueue.push({ phone: customerPhone, message });
+                console.log(`Message queued for ${customerPhone}`);
+            }
+            
+            res.status(200).send('Message handled successfully');
         } else {
             res.status(400).send('Invalid webhook data');
         }

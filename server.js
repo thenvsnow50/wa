@@ -1,7 +1,7 @@
 const express = require('express');
 const { Client } = require('whatsapp-web.js');
 const bodyParser = require('body-parser');
-const qrcode = require('qrcode-terminal');
+const qrcode = require('qrcode');
 const fs = require('fs');
 
 // Initialize express
@@ -22,8 +22,18 @@ if (fs.existsSync(sessionFilePath)) {
   client.initialize(sessionData);
 } else {
   client.on('qr', (qr) => {
-    qrcode.generate(qr, { small: true });
-    console.log('Scan this QR code to log in to WhatsApp');
+    // Generate the QR code as an image and send it to the web page
+    qrcode.toDataURL(qr, (err, url) => {
+      if (err) {
+        console.error('Error generating QR code:', err);
+      } else {
+        // Display the QR code in the browser
+        app.get('/qr', (req, res) => {
+          res.send(`<img src="${url}" alt="Scan this QR code to log in to WhatsApp">`);
+        });
+        console.log('QR Code generated, visit /qr to scan');
+      }
+    });
   });
 }
 
@@ -63,7 +73,7 @@ app.post('/webhook', (req, res) => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

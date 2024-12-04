@@ -37,7 +37,7 @@ const processMessageQueue = async () => {
             messageQueue.shift();
         } catch (err) {
             console.log(`Failed to send message to ${phone}:`, err.message);
-            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before retry
+            await new Promise(resolve => setTimeout(resolve, 5000));
         }
     }
 };
@@ -79,17 +79,24 @@ app.post('/webhook', async (req, res) => {
     try {
         if (req.body?.customer?.phone) {
             const customerPhone = req.body.customer.phone;
-            const orderNumber = req.body.order_number;
-            const totalAmount = req.body.total_price;
+            const orderNumber = req.body.name;
             const currency = req.body.currency;
             const customerName = req.body.customer.first_name;
             
-            const message = `Hi ${customerName}! Thank you for your order #${orderNumber}. Your order total is ${currency} ${totalAmount}. We will process it soon.`;
+            // Create order details section
+            let orderDetails = '';
+            req.body.line_items.forEach(item => {
+                orderDetails += `\n- ${item.name} (${item.variant_title})`;
+                orderDetails += `\n  Quantity: ${item.quantity}`;
+                orderDetails += `\n  Price: ${currency} ${item.price}\n`;
+            });
+            
+            const message = `Hi ${customerName}! Thank you for your order ${orderNumber}.\n\nOrder Details:${orderDetails}\nTotal Amount: ${currency} ${req.body.total_price}\n\nWe will process your order soon.`;
 
             if (isClientReady) {
                 const formattedPhone = customerPhone.replace(/[^0-9]/g, '') + '@c.us';
                 await client.sendMessage(formattedPhone, message);
-                console.log(`Message sent directly to ${customerPhone}`);
+                console.log(`Message sent to ${customerPhone}`);
             } else {
                 messageQueue.push({ phone: customerPhone, message });
                 console.log(`Message queued for ${customerPhone}`);

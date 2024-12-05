@@ -4,16 +4,16 @@
   "description": "WhatsApp Shopify integration",
   "main": "server.js",
   "engines": {
-    "node": "18.x"
+    "node": "16.x"
   },
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "express": "4.18.2",
-    "whatsapp-web.js": "1.21.0",
+    "whatsapp-web.js": "1.19.4",
     "body-parser": "1.20.2",
     "qrcode": "1.5.3",
-    "puppeteer": "19.7.0"
+    "puppeteer": "13.7.0"
   }
 }

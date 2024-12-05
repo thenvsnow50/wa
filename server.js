@@ -23,13 +23,9 @@ const client = new Client({
             '--no-first-run',
             '--no-zygote',
             '--single-process',
-            '--disable-gpu',
-            '--disable-extensions',
-            '--disable-software-rasterizer',
-            '--disable-web-security'
+            '--disable-gpu'
         ],
-        headless: true,
-        executablePath: process.env.CHROME_BIN || '/usr/bin/google-chrome'
+        headless: true
     }
 });
 
@@ -39,6 +35,7 @@ client.on('loading_screen', (percent, message) => {
 
 client.on('auth_failure', () => {
     console.log('AUTHENTICATION FAILED - Retrying...');
+    client.initialize();
 });
 
 const processMessageQueue = async () => {

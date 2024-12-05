@@ -1,16 +1,14 @@
 {
   "name": "whatsapp-shopify",
   "version": "1.0.0",
-  "description": "WhatsApp Shopify integration using whatsapp-web.js",
+  "description": "WhatsApp Shopify integration",
   "main": "server.js",
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   },
   "scripts": {
     "start": "node server.js"
   },
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "express": "4.18.2",
     "whatsapp-web.js": "1.21.0",
